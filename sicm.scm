@@ -515,11 +515,11 @@
           F))))
 
 (define (L-pendulum-formal m l g)
-  (compose (L-pendulum-formal-c m g l)
+  (compose (L-pendulum-formal-c m l g)
            (F->C p->c)))
 
 (se
- (((Lagrange-equations (L-pendulum-formal-c 'm 'l 'g))
+ (((Lagrange-equations (L-pendulum-formal 'm 'l 'g))
    (up (literal-function 'theta)
        (literal-function 'c)
        (literal-function 'F)))
