@@ -524,3 +524,62 @@
        (literal-function 'c)
        (literal-function 'F)))
   't))
+
+(define ((L-foucault-np-cart G M m) local)
+  (let ((q (Q local))
+        (v (Qdot local)))
+    (let ((x (ref q 0))
+          (y (ref q 1))
+          (z (ref q 2)))
+      (+ (* 1/2 m (square v))
+         (/ (* G M m) (sqrt (square q)))))))
+
+(define ((Rz omega) tuple)
+  (let ((x (ref tuple 0))
+        (y (ref tuple 1))
+        (z (ref tuple 2)))
+    (up (+ (* x (cos omega)) (* y (sin omega) -1))
+        (+ (* x (sin omega)) (* y (cos omega)))
+        z)))
+
+(define ((Ry omega) tuple)
+  (let ((x (ref tuple 0))
+        (y (ref tuple 1))
+        (z (ref tuple 2)))
+    (up (+ (* x (cos omega)) (* z (sin omega)))
+        y
+        (+ (* x (sin omega) -1) (* z (cos omega))))))
+
+(se
+ ((compose (Rz (* 'Omega 't)) (Ry 'phi))
+  (up 'x_0 'y_0 'z_0)))
+
+(define ((north-pole-polar->cartesian R l) tuple)
+  (let ((theta (ref tuple 0))
+        (lamb (ref tuple 1)))
+    (up (* l (sin theta) (cos lamb))
+        (* l (sin theta) (sin lamb))
+        (+ R l (- (cos theta))))))
+
+(define ((foucault-transform Omega phi R l) local)
+  (let ((t (time local))
+        (q (Q local)))
+    (let ((theta (ref q 0))
+          (lamb (ref q 1)))
+      ((compose (Rz (* Omega t))
+                (Ry phi))
+       ((north-pole-polar->cartesian R l)
+        (up theta lamb))))))
+
+(define (L-foucault Omega phi R l M m G)
+  (compose (L-foucault-np-cart G M m)
+           (F->C (foucault-transform Omega phi R l))))
+
+(se
+ ())
+
+(se
+ (((Lagrange-equations (L-foucault 'Omega 'phi 'R 'l 'M 'm 'G))
+   (up (literal-function 'theta)
+       (literal-function 'lambda)))
+  't))
