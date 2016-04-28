@@ -525,14 +525,22 @@
        (literal-function 'F)))
   't))
 
-(define ((L-foucault-np-cart G M m) local)
+(define ((L-foucault-np-cart G M m R) local)
   (let ((q (Q local))
         (v (Qdot local)))
     (let ((x (ref q 0))
           (y (ref q 1))
           (z (ref q 2)))
       (+ (* 1/2 m (square v))
-         (/ (* G M m) (sqrt (square q)))))))
+         (/ (* G M m z) (square R))
+         ;(/ (* G M m) (sqrt (square q)))
+         ))))
+
+(se
+ ((L-foucault-np-cart 'G 'M 'm 'R)
+  (up 't
+      (up 'x 'y 'z)
+      (up 'xdot 'ydot 'zdot))))
 
 (define ((Rz omega) tuple)
   (let ((x (ref tuple 0))
@@ -571,15 +579,42 @@
        ((north-pole-polar->cartesian R l)
         (up theta lamb))))))
 
+(se
+ ((foucault-transform 'Omega 'phi 'R 'l)
+  (up 't
+      (up 'theta 'lambda)
+      (up 'thetadot 'lambdadot))))
+
 (define (L-foucault Omega phi R l M m G)
-  (compose (L-foucault-np-cart G M m)
+  (compose (L-foucault-np-cart G M m R)
            (F->C (foucault-transform Omega phi R l))))
 
 (se
- ())
+ ((L-foucault 'Omega 'phi 'R 'l 'M 'm 'G)
+  (up 't
+      (up 'theta 'lambda)
+      (up 'thetadot 'lambdadot))))
 
 (se
  (((Lagrange-equations (L-foucault 'Omega 'phi 'R 'l 'M 'm 'G))
    (up (literal-function 'theta)
        (literal-function 'lambda)))
   't))
+
+
+(define ((T-pend m l g ys) local)
+  (let ((t (time local))
+        (theta (coordinate local))
+        (thetadot (velocity local)))
+    (let ((vys (D ys)))
+      (* 1/2 m
+         (+ (square (* l thetadot))
+            (square (vys t))
+            (* 2 l (vys t) thetadot (sin theta)))))))
+
+(define ((V-pend m l g ys) local)
+  (let ((t (time local))
+        (theta (coordinate local)))
+    (* m g (- (ys t) (* l (cos theta))))))
+
+(define L-pend (- T-pend V-pend))
