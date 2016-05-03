@@ -532,8 +532,8 @@
           (y (ref q 1))
           (z (ref q 2)))
       (+ (* 1/2 m (square v))
-         (/ (* G M m z) (square R))
-         ;(/ (* G M m) (sqrt (square q)))
+         ;(/ (* G M m z) (square R))
+         (/ (* G M m) (sqrt (square q)))
          ))))
 
 (se
@@ -567,7 +567,7 @@
         (lamb (ref tuple 1)))
     (up (* l (sin theta) (cos lamb))
         (* l (sin theta) (sin lamb))
-        (+ R l (- (cos theta))))))
+        (+ R l (- (* l (cos theta)))))))
 
 (define ((foucault-transform Omega phi R l) local)
   (let ((t (time local))
@@ -590,13 +590,13 @@
            (F->C (foucault-transform Omega phi R l))))
 
 (se
- ((L-foucault 'Omega 'phi 'R 'l 'M 'm 'G)
+ ((L-foucault 'Omega 0 'R 'l 'M 'm 'G)
   (up 't
       (up 'theta 'lambda)
       (up 'thetadot 'lambdadot))))
 
 (se
- (((Lagrange-equations (L-foucault 'Omega 'phi 'R 'l 'M 'm 'G))
+ (((Lagrange-equations (L-foucault 'Omega 0 'R 'l 'M 'm 'G))
    (up (literal-function 'theta)
        (literal-function 'lambda)))
   't))
@@ -618,3 +618,300 @@
     (* m g (- (ys t) (* l (cos theta))))))
 
 (define L-pend (- T-pend V-pend))
+
+(define ((V-central alpha beta) r)
+  (- (* beta (expt r alpha))))
+
+(define ((L-central m alpha beta) local)
+  (let ((q (Q local))
+        (v (Qdot local)))
+    (let ((r (ref q 0))
+          (theta (ref q 1))
+          (rdot (ref v 0))
+          (thetadot (ref v 1)))
+      (+ (* 1/2 m (+ (square rdot)
+                     (square (* r thetadot))))
+         ((V-central alpha beta) r)))))
+
+(se
+ ((L-central 'm 'alpha 'beta)
+  (up 't
+      (up 'r 'theta)
+      (up 'rdot 'thetadot))))
+
+(define (central-field-state-derivative m alpha beta)
+  (Lagrangian->state-derivative
+   (L-central m alpha beta)))
+
+(se
+ ((central-field-state-derivative 'm 'alpha 'beta)
+  (up 't
+      (up 'r 'theta)
+      (up 'rdot 'thetadot))))
+
+(define plot-win (frame -10.0 10.0 -10.0 10.0))
+
+(define ((monitor-polar win) state)
+  (let ((q (Q state)))
+    (let ((r (ref q 0))
+          (theta (ref q 1)))
+      (plot-point win (* r (cos theta)) (* r (sin theta))))))
+
+((evolve central-field-state-derivative
+         1.0 ; m
+         0.25 ; alpha
+         2.0 ; beta
+         )
+ (up 0.0
+     (up 3.0 0.0)
+     (up 0.3 0.3))
+ (monitor-polar plot-win)
+ 0.01
+ 100.0
+ 1.0e-13)
+
+
+(se
+ ((L-foucault 'Omega 'phi 'R 'l 'M 'm 'G)
+  (up 't
+      (up 'theta 'lambda)
+      (up 'thetadot 'lambdadot))))
+
+(define plot-win (frame 0.0 100.0 :-pi :pi))
+
+(define (foucault-state-derivative Omega phi R l M m G)
+  (Lagrangian->state-derivative
+   (L-foucault Omega phi R l M m G)))
+
+(se
+ ((foucault-state-derivative 'Omega 'phi 'R 'l 'M 'm 'G)
+  (up 't
+      (up 'theta 'lambda)
+      (up 'thetadot 'lambdadot))))
+
+(define ((monitor-lambda win) state)
+  (let ((lamb ((principal-value :pi) (ref (coordinate state) 1))))
+    (plot-point win (time state) lamb)))
+
+((evolve foucault-state-derivative
+         0.1 ;Omega
+         0.0 ;phi
+         10.0 ;R
+         0.1 ;l
+         10 ;M
+         0.1 ;m
+         0.01 ;G
+         )
+ (up 0.0
+     (up 0.1 0.0)
+     (up 0.0 0.0))
+ (monitor-lambda plot-win)
+ 0.01
+ 100.0
+ 1.0e-13)
+
+(define ((L-uniform-acceleration m g) local)
+  (let ((q (Q local))
+        (v (velocity local)))
+    (let ((z (ref q 2)))
+      (- (* 1/2 m (square v)) (* m g z)))))
+
+(define ((dp-coordinates l zs) local)
+  (let ((t (time local))
+        (q (Q local)))
+    (let ((theta (ref q 0))
+          (phi (ref q 1)))
+      (let ((x (* l (sin theta) (cos phi)))
+            (y (* l (sin theta) (sin phi)))
+            (z (* l (cos theta))))
+        (up x
+            y
+            (- (zs t) z))))))
+
+(define ((L-pend m l g zs) local)
+  (let ((t (time local))
+        (q (Q local))
+        (v (Qdot local)))
+    (let ((theta (ref q 0))
+          (thetadot (ref v 0)))
+      (let ((total (- (* l m (cos theta) (((expt D 2) zs) t))
+                      (* l m (sin theta) ((D zs) t) thetadot))))
+        (+ ((compose (L-uniform-acceleration m g)
+                     (F->C (dp-coordinates l zs)))
+            local)
+           total)))))
+
+(se
+ ((L-pend 'm 'l 'g (literal-function 'z_s))
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+
+(se
+ ((Lagrangian->energy (L-pend 'm 'l 'g (literal-function 'z_s)))
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(se
+ (((partial 1) (L-pend 'm 'l 'g (literal-function 'z_s)))
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(se
+ (((partial 2) (L-pend 'm 'l 'g (literal-function 'z_s)))
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(define ((L0 m V) local)
+  (let ((t (time local))
+        (q (coordinates local))
+        (v (velocities local)))
+    (- (* 1/2 m (square v)) (V t q))))
+
+(define ((V a GM0 GM1 m) t xy)
+  (let ((Omega (sqrt (/ (+ GM0 GM1) (expt a 3))))
+        (a0 (* (/ GM1 (+ GM0 GM1)) a))
+        (a1 (* (/ GM0 (+ GM0 GM1)) a)))
+    (let ((x (ref xy 0)) (y (ref xy 1))
+          (x0 (* -1 a0 (cos (* Omega t))))
+          (y0 (* -1 a0 (sin (* Omega t))))
+          (x1 (* +1 a1 (cos (* Omega t))))
+          (y1 (* +1 a1 (sin (* Omega t)))))
+      (let ((r0
+             (sqrt (+ (square (- x x0)) (square (- y y0)))))
+            (r1
+             (sqrt (+ (square (- x x1)) (square (- y y1))))))
+        (- (+ (/ (* GM0 m) r0) (/ (* GM1 m) r1)))))))
+
+(se
+ ((V 'a 'GM_0 'GM_1 'm)
+  't
+  (up 'x 'y)))
+
+(define ((LR3B m a GM0 GM1) local)
+  (let ((q (coordinates local))
+        (qdot (velocities local))
+        (Omega (sqrt (/ (+ GM0 GM1) (expt a 3))))
+        (a0 (* (/ GM1 (+ GM0 GM1)) a))
+        (a1 (* (/ GM0 (+ GM0 GM1)) a)))
+    (let ((x (ref q 0))     (y (ref q 1))
+          (xdot (ref qdot 0)) (ydot (ref qdot 1)))
+      (let ((r0 (sqrt (+ (square (+ x a0)) (square y))))
+            (r1 (sqrt (+ (square (- x a1)) (square y)))))
+        (+ (* 1/2 m (square qdot))
+           (* 1/2 m (square Omega) (square q))
+           (* m Omega (- (* x ydot) (* xdot y)))
+           (/ (* GM0 m) r0) (/ (* GM1 m) r1))))))
+
+(define ((LR3B1 m a0 a1 Omega GM0 GM1) local)
+  (let ((q (coordinates local))
+        (qdot (velocities local)))
+    (let ((x (ref q 0))     (y (ref q 1))
+          (xdot (ref qdot 0)) (ydot (ref qdot 1)))
+      (let ((r0 (sqrt (+ (square (+ x a0)) (square y))))
+            (r1 (sqrt (+ (square (- x a1)) (square y)))))
+        (+ (* 1/2 m (square qdot))
+           (* 1/2 m (square Omega) (square q))
+           (* m Omega (- (* x ydot) (* xdot y)))
+           (/ (* GM0 m) r0) (/ (* GM1 m) r1))))))
+
+(se
+ ((Lagrangian->energy (LR3B1 'm 'a_0 'a_1 'Omega 'GM_0 'GM_1))
+  (up 't (up 'x_r 'y_r) (up 'v_r^x 'v_r^y))))
+
+(define ((Lr m a0 a1 Omega G M0 M1) local)
+  (let ((q (Q local))
+        (v (Qdot local)))
+    (let ((x (ref q 0))
+          (y (ref q 1))
+          (vx (ref v 0))
+          (vy (ref v 1)))
+      (let ((r0 (sqrt (+ (square (+ x a0)) (square y))))
+            (r1 (sqrt (+ (square (- x a1)) (square y)))))
+        (+ (* 1/2 m (square v))
+           (* 1/2 m (square Omega) (square q))
+           (* m Omega (- (* x vy) (* vx y)))
+           (/ (* G M0 m) r0)
+           (/ (* G M1 m) r1))))))
+
+(se
+ ((Lr 'm 'a_0 'a_1 'Omega 'G 'M_0 'M_1)
+  (up 't
+      (up 'x_r 'y_r)
+      (up 'xdot_r 'ydot_r))))
+
+(se
+ (((Lagrange-equations (Lr 'm 'a_0 'a_1 'Omega 'G 'M_0 'M_1))
+   (up (literal-function 'x_r)
+       (literal-function 'y_r)))
+  't))
+
+(define ((L-free m) local)
+  (let ((qdot (Qdot local)))
+    (* 1/2 m (square qdot))))
+
+(define ((scale-trans a b c) local)
+  (let ((q (Q local)))
+    (let ((x (ref q 0))
+          (y (ref q 1))
+          (z (ref q 2)))
+      (up (* x a)
+          (* y b)
+          (* z c)))))
+
+(define (p->c local)
+  (let ((q (Q local)))
+    (let ((theta (ref q 0))
+          (phi (ref q 1)))
+      (up (* (sin theta) (cos phi))
+          (* (sin theta) (sin phi))
+          (cos theta)))))
+
+(define (L-ellipsoid m a b c)
+  (compose (L-free m)
+           (F->C (scale-trans a b c))
+           (F->C p->c)))
+
+(se
+ ((L-ellipsoid 'm 'a 'b 'c)
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(define ((F-tilde a b c) s)
+  (compose
+   (Rx s)
+   Q
+   (F->C (scale-trans a b c))
+   (F->C p->c)))
+
+(se
+ (((F-tilde 'a 'b 'c) 's)
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(se
+ (((D (F-tilde 'a 'b 'c)) 's)
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(se
+ ((* (ref (D (L-free 'm 'a 'a 'c)) 2)
+     ((D (F-tilde 'a 'a 'c)) 0))
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+(se
+ ((ref (D (L-ellipsoid 'm 'a 'a 'c)) 2)
+  (up 't
+      (up 'theta 'phi)
+      (up 'thetadot 'phidot))))
+
+
