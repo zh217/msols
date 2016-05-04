@@ -915,3 +915,95 @@
       (up 'thetadot 'phidot))))
 
 
+(se
+ ((Gamma-bar (lambda (q)
+               (let ((r (ref q 0))
+                     (theta (ref q 1)))
+                 (up (* r (cos theta))
+                     (* r (sin theta))))))
+  (up 't
+      (up 'r 'theta)
+      (up 'rdot 'thetadot))))
+
+(p->r
+ ((Gamma (up (literal-function 'r)
+             (literal-function 'theta)))
+  't))
+
+((Gamma (up (literal-function 'r)
+            (literal-function 'theta))))
+
+(define (p->rr fbar)
+  )
+
+(define ((L-free m) local)
+  (let ((qdot (Qdot local)))
+    (* 1/2 m (square qdot))))
+
+(define ((constraint-triaxial a b c) tuple)
+  (let ((x (ref tuple 0))
+        (y (ref tuple 1))
+        (z (ref tuple 2)))
+    (- 1 (+ (/ (square x) (square a))
+            (/ (square y) (square b))
+            (/ (square z) (square c))))))
+
+(define ((L-triaxial m a b c) local)
+  (let ((t (time local))
+        (q (Q local))
+        (qdot (Qdot local)))
+    (let ((x (ref q 0))
+          (y (ref q 1))
+          (z (ref q 2))
+          (l (ref q 3))
+          (vx (ref qdot 0))
+          (vy (ref qdot 1))
+          (vz (ref qdot 2)))
+      (+ ((L-free m) (up t
+                         (up x y z)
+                         (up vx vy vz)))
+         (* l ((constraint-triaxial a b c) (up x y z)))))))
+
+(se
+ ((L-triaxial 'm 'a 'b 'c)
+  ((Gamma (up (literal-function 'x)
+              (literal-function 'y)
+              (literal-function 'z)
+              (literal-function 'lambda)))
+   't)))
+
+(se
+ (((Lagrange-equations (L-triaxial 'm 'a 'b 'c))
+   (up (literal-function 'x)
+       (literal-function 'y)
+       (literal-function 'z)
+       (literal-function 'lambda)))
+  't))
+
+(define ((L-golf m g h) local)
+  (let* ((q (Q local))
+         (x (ref q 0))
+         (y (ref q 1))
+         (z (ref q 2))
+         (l (ref q 3))
+         (v (Qdot local))
+         (vx (ref v 0))
+         (vy (ref v 1))
+         (vz (ref v 2)))
+    (+ (* 1/2 m (square (up vx vy vz)))
+       (* -1 m g z)
+       (* l (- z (h x y))))))
+
+(se
+ ((L-golf 'm 'g (literal-function 'h (-> (X Real Real) Real)))
+  (up 't
+      (up 'x 'y 'z 'lambda)
+      (up 'xdot 'ydot 'zdot 'lambdadot))))
+
+(se
+ (((Lagrange-equations (L-golf 'm 'g (literal-function 'h (-> (X Real Real) Real))))
+   (up (literal-function 'x)
+       (literal-function 'y)
+       (literal-function 'z)
+       (literal-function 'lambda)))
+  't))
