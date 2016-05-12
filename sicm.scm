@@ -1007,3 +1007,85 @@
        (literal-function 'z)
        (literal-function 'lambda)))
   't))
+
+(define (Rx t)
+  (down (up 1 0 0)
+        (up 0 (cos t) (sin t))
+        (up 0 (- (sin t)) (cos t))))
+
+(define (Rz t)
+  (down (up (cos t) (sin t) 0)
+        (up (- (sin t)) (cos t) 0)
+        (up 0 0 1)))
+
+(define (M theta phi psi)
+  (* (Rz phi)
+     (Rx theta)
+     (Rz psi)))
+
+(se
+ (M 'theta 'phi 'psi))
+
+(se ((literal-function 'f) 't))
+
+(se ((M (literal-function 'theta)
+        (literal-function 'phi)
+        (literal-function 'psi))
+     't))
+
+(se
+ ((D (M (literal-function 'theta)
+        (literal-function 'phi)
+        (literal-function 'psi)))
+  't))
+
+(se
+ ((D (Euler->M (up (literal-function 'theta)
+                   (literal-function 'phi)
+                   (literal-function 'psi))))
+  't))
+
+(define diff
+  (/ (- (D (Euler->M (up (literal-function 'theta)
+                         (literal-function 'phi)
+                         (literal-function 'psi))))
+        (* (Euler->M (up (literal-function 'theta)
+                         (literal-function 'phi)
+                         (literal-function 'psi)))
+           (A (up 'omega^a
+                  'omega^b
+                  'omega^c))))
+     (sin (literal-function 'theta))))
+
+(se
+ ((* (Euler->M (up (literal-function 'theta)
+                   (literal-function 'phi)
+                   (literal-function 'psi)))
+     (A (up 'omega^a
+            'omega^b
+            'omega^c)))
+  't))
+
+(se
+ (/ (ref (diff 't) 2 2) ((sin (literal-function 'theta)) 't)))
+
+(se (ref (diff 't) 2 1))
+
+(se (/ (+ (ref (diff 't) 2 1)
+          ((* (ref (diff 't) 2 2)
+              (/ (* (cos (literal-function 'psi))
+                    (cos (literal-function 'theta)))
+                 (sin (literal-function 'theta))))
+           't))
+       ((* (sin (literal-function 'psi)))
+        't)))
+
+
+(define (A omega)
+  (let ((x (ref omega 0))
+        (y (ref omega 1))
+        (z (ref omega 2)))
+    (matrix-by-rows
+     (list 0 (- z) y)
+     (list z 0 (- x))
+     (list (- y) x 0))))
