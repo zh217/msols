@@ -1145,3 +1145,19 @@
   (up 't
       (up 'x 'y)
       (up 'xdot 'ydot))))
+
+
+(se
+ ((Lagrangian->Hamiltonian (L-bowl 'a 'b 'm 'g))
+  (up 't
+      (up 'x 'y)
+      (down 'p_x 'p_y))))
+
+(se
+ (((Hamilton-equations
+    (Lagrangian->Hamiltonian (L-bowl 'a 'b 'm 'g)))
+   (up (literal-function 'x)
+       (literal-function 'y))
+   (down (literal-function 'p_x)
+         (literal-function 'p_y)))
+  't))
