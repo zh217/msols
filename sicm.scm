@@ -1089,3 +1089,59 @@
      (list 0 (- z) y)
      (list z 0 (- x))
      (list (- y) x 0))))
+
+(define ((L-helical-track M R beta m g) local)
+  (let* ((q (Q local))
+         (v (Qdot local))
+         (theta (ref q 0))
+         (h (ref q 1))
+         (phi (+ theta (* beta h)))
+         (thetadot (ref v 0))
+         (hdot (ref v 1))
+         (phidot (+ thetadot (* beta hdot)))
+         (I (* 1/2 M (expt R 2)))
+         (TLarge (* 1/2 I (expt thetadot 2)))
+         (TSmallZ (* 1/2 m (expt hdot 2)))
+         (TSmallXY (* 1/2 m (expt R 2) (expt phidot 2)))
+         (VSmall (* m g h)))
+    (+ TLarge TSmallZ TSmallXY (- VSmall))))
+
+(se
+ ((L-helical-track 'M 'R 'beta 'm 'g)
+  (up 't
+      (up 'theta 'h)
+      (up 'thetadot 'hdot))))
+
+(se
+ ((Lagrangian->Hamiltonian (L-helical-track 'M 'R 'beta 'm 'g))
+  (up 't
+      (up 'theta 'h)
+      (down 'p_theta 'p_h))))
+
+(se
+ (((Hamilton-equations
+    (Lagrangian->Hamiltonian (L-helical-track 'M 'R 'beta 'm 'g)))
+   (up (literal-function 'theta)
+       (literal-function 'h))
+   (down (literal-function 'p_theta)
+         (literal-function 'p_h)))
+  't))
+
+(define ((L-bowl a b m g) local)
+  (let* ((q (Q local))
+         (qdot (Qdot local))
+         (x (ref q 0))
+         (y (ref q 1))
+         (vx (ref qdot 0))
+         (vy (ref qdot 1))
+         (z (+ (* a (expt x 2)) (* b (expt y 2))))
+         (vz (+ (* 2 a x vx) (* 2 b y vy)))
+         (T (* 1/2 m (square (up vx vy vz))))
+         (V (* m g z)))
+    (- T V)))
+
+(se
+ ((L-bowl 'a 'b 'm 'g)
+  (up 't
+      (up 'x 'y)
+      (up 'xdot 'ydot))))
